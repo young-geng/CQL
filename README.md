@@ -19,14 +19,14 @@ export PYTHONPATH="$PYTHONPATH:$(pwd)"
 ## Run Experiments
 You can run SAC experiments using the following command:
 ```
-python -m SimpleSAC.sac_main --env 'HalfCheetah-v2' --output_dir './experiment_output' --device='cuda'
+python -m SimpleSAC.sac_main --env 'HalfCheetah-v2' --logging.output_dir './experiment_output' --device='cuda'
 ```
 All available command options can be seen in SimpleSAC/conservative\_sac_main.py and SimpleSAC/conservative_sac.py.
 
 
 You can run CQL experiments using the following command:
 ```
-python -m SimpleSAC.conservative_sac_main --env 'halfcheetah-medium-v0' --output_dir './experiment_output' --device='cuda'
+python -m SimpleSAC.conservative_sac_main --env 'halfcheetah-medium-v0' --logging.output_dir './experiment_output' --device='cuda'
 ```
 
 If you want to run on CPU only, just omit the `--device='cuda'` part.
@@ -48,7 +48,7 @@ export WANDB_API_KEY='YOUR W&B API KEY HERE'
 ```
 Then you can run experiments with W&B logging turned on:
 ```
-python -m SimpleSAC.conservative_sac_main --env 'halfcheetah-medium-v0' --output_dir './experiment_output' --device='cuda' --wandb_logging
+python -m SimpleSAC.conservative_sac_main --env 'halfcheetah-medium-v0' --logging.output_dir './experiment_output' --device='cuda' --logging.online
 ```
 
 

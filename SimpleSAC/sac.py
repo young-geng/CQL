@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 
-import ml_collections
+from ml_collections import ConfigDict
 
 import numpy as np
 import torch
@@ -25,7 +25,7 @@ class SAC(object):
     
     @staticmethod
     def get_default_config():
-        config = ml_collections.ConfigDict()
+        config = ConfigDict()
         config.discount = 0.99
         config.reward_scale = 1.0
         config.alpha_multiplier = 1.0

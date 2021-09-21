@@ -438,35 +438,4 @@ def setup_logger(
     return log_dir
 
 
-class WandBLogger(object):
-    def __init__(self, wandb_logging, variant, project, experiment_id, prefix='', output_dir=None):
-        self.wandb_logging = wandb_logging
-        if wandb_logging:
-            global wandb
-            import wandb
-
-            if prefix != '':
-                project = '{}--{}'.format(prefix, project)
-
-            if output_dir is None:
-                output_dir = tempfile.mkdtemp()
-            else:
-                output_dir = os.path.join(output_dir, experiment_id)
-                os.makedirs(output_dir, exist_ok=True)
-
-            time.sleep(np.random.uniform(0, 180))
-            wandb.init(
-                config=variant,
-                project=project,
-                dir=output_dir,
-                id=experiment_id,
-                settings=wandb.Settings(start_method="thread"),
-            )
-
-
-    def log(self, *args, **kwargs):
-        if self.wandb_logging:
-            wandb.log(*args, **kwargs)
-
-
 logger = Logger()

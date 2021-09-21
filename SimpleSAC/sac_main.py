@@ -17,14 +17,14 @@ from .replay_buffer import ReplayBuffer, batch_to_torch
 from .model import TanhGaussianPolicy, FullyConnectedQFunction, SamplerPolicy
 from .sampler import StepSampler, TrajSampler
 from .utils import Timer, define_flags_with_default, set_random_seed, print_flags, get_user_flags, prefix_metrics
-from viskit.logging import logger, setup_logger, WandBLogger
+from .utils import WandBLogger
+from viskit.logging import logger, setup_logger
 
 
 FLAGS_DEF = define_flags_with_default(
     env='HalfCheetah-v2',
     max_traj_length=1000,
     replay_buffer_size=1000000,
-    output_dir='/tmp/simple_sac',
     seed=42,
     device='cpu',
 
@@ -42,10 +42,7 @@ FLAGS_DEF = define_flags_with_default(
     batch_size=256,
 
     sac=SAC.get_default_config(),
-
-    wandb_logging=False,
-    wandb_prefix='SimpleSAC',
-    wandb_project='sac',
+    logging=WandBLogger.get_default_config(),
 )
 
 
@@ -53,21 +50,13 @@ def main(argv):
     FLAGS = absl.flags.FLAGS
 
     variant = get_user_flags(FLAGS, FLAGS_DEF)
-    experiment_id = uuid.uuid4().hex
+    wandb_logger = WandBLogger(config=FLAGS.logging, variant=variant)
     setup_logger(
         variant=variant,
-        exp_id=experiment_id,
+        exp_id=wandb_logger.experiment_id,
         seed=FLAGS.seed,
-        base_log_dir=FLAGS.output_dir,
+        base_log_dir=FLAGS.logging.output_dir,
         include_exp_prefix_sub_dir=False
-    )
-
-    wandb_logger = WandBLogger(
-        wandb_logging=FLAGS.wandb_logging,
-        variant=variant,
-        project=FLAGS.wandb_project,
-        experiment_id=experiment_id,
-        prefix=FLAGS.wandb_prefix,
     )
 
     set_random_seed(FLAGS.seed)
@@ -100,7 +89,7 @@ def main(argv):
     target_qf2 = deepcopy(qf2)
 
     if FLAGS.sac.target_entropy >= 0.0:
-        FLAGS.sac.target_entropy=target_entropy = -np.prod(eval_sampler.env.action_space.shape).item()
+        FLAGS.sac.target_entropy = -np.prod(eval_sampler.env.action_space.shape).item()
 
     sac = SAC(FLAGS.sac, policy, qf1, qf2, target_qf1, target_qf2)
     sac.torch_to_device(FLAGS.device)
