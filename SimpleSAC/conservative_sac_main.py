@@ -40,26 +40,9 @@ FLAGS_DEF = define_flags_with_default(
     eval_n_trajs=5,
 
     batch_size=256,
-
-    discount=0.99,
-    reward_scale=1.0,
-    alpha_multiplier=1.0,
-    use_automatic_entropy_tuning=True,
-    target_entropy=0.0,
-    policy_lr=3e-4,
-    qf_lr=3e-4,
-    optimizer_type='adam',
-    soft_target_update_rate=5e-3,
-    target_update_period=1,
-
-    use_cql=True,
-    cql_n_actions=10,
-    cql_importance_sample=True,
-    cql_lagrange=True,
-    cql_target_action_gap=-1.0,
-    cql_temp=1.0,
-    cql_min_q_weight=5.0,
-
+    
+    cql=ConservativeSAC.get_default_config(),
+    
     wandb_logging=False,
     wandb_prefix='NStepSAC',
     wandb_project='test',
@@ -117,32 +100,10 @@ def main(argv):
     )
     target_qf2 = deepcopy(qf2)
 
-    if FLAGS.target_entropy >= 0:
-        target_entropy = -np.prod(eval_sampler.env.action_space.shape).item()
-    else:
-        target_entropy = FLAGS.target_entropy
+    if FLAGS.cql.target_entropy >= 0.0:
+        FLAGS.cql.target_entropy=target_entropy = -np.prod(eval_sampler.env.action_space.shape).item()
 
-    sac = ConservativeSAC(
-        policy, qf1, qf2, target_qf1, target_qf2,
-        discount=FLAGS.discount,
-        reward_scale=FLAGS.reward_scale,
-        alpha_multiplier=FLAGS.alpha_multiplier,
-        use_automatic_entropy_tuning=FLAGS.use_automatic_entropy_tuning,
-        target_entropy=target_entropy,
-        policy_lr=FLAGS.policy_lr,
-        qf_lr=FLAGS.qf_lr,
-        optimizer_type=FLAGS.optimizer_type,
-        soft_target_update_rate=FLAGS.soft_target_update_rate,
-        target_update_period=FLAGS.target_update_period,
-
-        use_cql=True,
-        cql_n_actions=FLAGS.cql_n_actions,
-        cql_importance_sample=FLAGS.cql_importance_sample,
-        cql_lagrange=FLAGS.cql_lagrange,
-        cql_target_action_gap=FLAGS.cql_target_action_gap,
-        cql_temp=FLAGS.cql_temp,
-        cql_min_q_weight=FLAGS.cql_min_q_weight,
-    )
+    sac = ConservativeSAC(FLAGS.cql, policy, qf1, qf2, target_qf1, target_qf2)
     sac.torch_to_device(FLAGS.device)
 
     sampler_policy = SamplerPolicy(policy, FLAGS.device)

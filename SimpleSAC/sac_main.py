@@ -41,16 +41,7 @@ FLAGS_DEF = define_flags_with_default(
 
     batch_size=256,
 
-    discount=0.99,
-    reward_scale=1.0,
-    alpha_multiplier=1.0,
-    use_automatic_entropy_tuning=True,
-    target_entropy=0.0,
-    policy_lr=3e-4,
-    qf_lr=3e-4,
-    optimizer_type='adam',
-    soft_target_update_rate=5e-3,
-    target_update_period=1,
+    sac=SAC.get_default_config(),
 
     wandb_logging=False,
     wandb_prefix='SimpleSAC',
@@ -108,24 +99,10 @@ def main(argv):
     )
     target_qf2 = deepcopy(qf2)
 
-    if FLAGS.target_entropy >= 0:
-        target_entropy = -np.prod(train_sampler.env.action_space.shape).item()
-    else:
-        target_entropy = FLAGS.target_entropy
+    if FLAGS.sac.target_entropy >= 0.0:
+        FLAGS.sac.target_entropy=target_entropy = -np.prod(eval_sampler.env.action_space.shape).item()
 
-    sac = SAC(
-        policy, qf1, qf2, target_qf1, target_qf2,
-        discount=FLAGS.discount,
-        reward_scale=FLAGS.reward_scale,
-        alpha_multiplier=FLAGS.alpha_multiplier,
-        use_automatic_entropy_tuning=FLAGS.use_automatic_entropy_tuning,
-        target_entropy=target_entropy,
-        policy_lr=FLAGS.policy_lr,
-        qf_lr=FLAGS.qf_lr,
-        optimizer_type=FLAGS.optimizer_type,
-        soft_target_update_rate=FLAGS.soft_target_update_rate,
-        target_update_period=FLAGS.target_update_period,
-    )
+    sac = SAC(FLAGS.sac, policy, qf1, qf2, target_qf1, target_qf2)
     sac.torch_to_device(FLAGS.device)
 
     sampler_policy = SamplerPolicy(policy, FLAGS.device)
