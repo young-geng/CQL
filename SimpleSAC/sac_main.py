@@ -36,7 +36,7 @@ FLAGS_DEF = define_flags_with_default(
     n_epochs=2000,
     n_env_steps_per_epoch=1000,
     n_train_step_per_epoch=1000,
-    eval_period=20,
+    eval_period=10,
     eval_n_trajs=5,
 
     batch_size=256,

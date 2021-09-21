@@ -70,10 +70,10 @@ class WandBLogger(object):
             self._variant['hostname'] = gethostname()
 
         if self.config.random_delay > 0:
-            time.sleep(np.random.uniform(0, random_delay))
+            time.sleep(np.random.uniform(0, self.config.random_delay))
 
         wandb.init(
-            config=variant,
+            config=self._variant,
             project=self.config.project,
             dir=self.config.output_dir,
             id=self.config.experiment_id,
