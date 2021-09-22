@@ -120,6 +120,9 @@ def main(argv):
 
                 metrics['average_return'] = np.mean([np.sum(t['rewards']) for t in trajs])
                 metrics['average_traj_length'] = np.mean([len(t['rewards']) for t in trajs])
+                metrics['average_normalizd_return'] = np.mean(
+                    [eval_sampler.env.get_normalized_score(np.sum(t['rewards'])) for t in trajs]
+                )
 
         metrics['train_time'] = train_timer()
         metrics['eval_time'] = eval_timer()
