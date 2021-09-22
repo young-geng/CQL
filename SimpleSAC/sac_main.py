@@ -96,9 +96,9 @@ def main(argv):
 
     sampler_policy = SamplerPolicy(policy, FLAGS.device)
 
-    metrics = {}
+    viskit_metrics = {}
     for epoch in range(FLAGS.n_epochs):
-
+        metrics = {}
         with Timer() as rollout_timer:
             train_sampler.sample(
                 sampler_policy, FLAGS.n_env_steps_per_epoch,
@@ -130,9 +130,10 @@ def main(argv):
         metrics['train_time'] = train_timer()
         metrics['eval_time'] = eval_timer()
         metrics['epoch_time'] = rollout_timer() + train_timer() + eval_timer()
+        wandb_logger.log(metrics)
+        viskit_metrics.update(metrics)
         logger.record_dict(metrics)
         logger.dump_tabular(with_prefix=False, with_timestamp=False)
-        wandb_logger.log(metrics)
 
 
 if __name__ == '__main__':

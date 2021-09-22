@@ -22,26 +22,28 @@ def soft_target_update(network, target_network, soft_target_update_rate):
 
 
 class SAC(object):
-    
+
     @staticmethod
-    def get_default_config():
+    def get_default_config(updates=None):
         config = ConfigDict()
         config.discount = 0.99
         config.reward_scale = 1.0
         config.alpha_multiplier = 1.0
         config.use_automatic_entropy_tuning = True
         config.backup_entropy = True
-        config.target_entropy = -3e-2
-        config.policy_lr = 1e-3
-        config.qf_lr = 1e-3
+        config.target_entropy = 0.0
+        config.policy_lr = 3e-4
+        config.qf_lr = 3e-4
         config.optimizer_type = 'adam'
         config.soft_target_update_rate = 5e-3
-        config.target_update_period = 1 
+        config.target_update_period = 1
+
+        if updates is not None:
+            config.update(updates)
         return config
 
     def __init__(self, config, policy, qf1, qf2, target_qf1, target_qf2):
-        self.config = SAC.get_default_config()
-        self.config.update(config)
+        self.config = SAC.get_default_config(config)
         self.policy = policy
         self.qf1 = qf1
         self.qf2 = qf2
@@ -110,7 +112,7 @@ class SAC(object):
             self.target_qf1(next_observations, new_next_actions),
             self.target_qf2(next_observations, new_next_actions),
         )
-        
+
         if self.config.backup_entropy:
             target_q_values = target_q_values - alpha * next_log_pi
 

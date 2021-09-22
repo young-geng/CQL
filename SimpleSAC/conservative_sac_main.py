@@ -23,7 +23,7 @@ from viskit.logging import logger, setup_logger
 
 
 FLAGS_DEF = define_flags_with_default(
-    env='halfcheetah-medium-v0',
+    env='halfcheetah-medium-v2',
     max_traj_length=1000,
     replay_buffer_size=1000000,
     seed=42,
@@ -97,10 +97,9 @@ def main(argv):
 
     sampler_policy = SamplerPolicy(policy, FLAGS.device)
 
-    metrics = {}
+    viskit_metrics = {}
     for epoch in range(FLAGS.n_epochs):
-
-        metrics['epoch'] = epoch
+        metrics = {'epoch': epoch}
 
         with Timer() as train_timer:
             for batch_idx in range(FLAGS.n_train_step_per_epoch):
@@ -125,9 +124,10 @@ def main(argv):
         metrics['train_time'] = train_timer()
         metrics['eval_time'] = eval_timer()
         metrics['epoch_time'] = train_timer() + eval_timer()
-        logger.record_dict(metrics)
-        logger.dump_tabular(with_prefix=False, with_timestamp=False)
         wandb_logger.log(metrics)
+        viskit_metrics.update(metrics)
+        logger.record_dict(viskit_metrics)
+        logger.dump_tabular(with_prefix=False, with_timestamp=False)
 
 
 if __name__ == '__main__':
