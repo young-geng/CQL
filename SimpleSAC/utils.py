@@ -6,6 +6,7 @@ import tempfile
 import os
 from copy import copy
 from socket import gethostname
+import pickle
 
 import numpy as np
 
@@ -33,7 +34,7 @@ class Timer(object):
 
     def __call__(self):
         return self._time
-        
+
 
 class WandBLogger(object):
 
@@ -47,11 +48,11 @@ class WandBLogger(object):
         config.random_delay = 0.0
         config.experiment_id = ''
         return config
-    
+
     def __init__(self, config, variant):
         self.config = WandBLogger.get_default_config()
         self.config.update(config)
-        
+
         if self.config.experiment_id == '':
             self.config.experiment_id = uuid.uuid4().hex
 
@@ -145,6 +146,8 @@ def print_flags(flags, flags_def):
             )
         )
     )
+
+
 def get_user_flags(flags, flags_def):
     output = {}
     for key in flags_def:
@@ -153,9 +156,9 @@ def get_user_flags(flags, flags_def):
             output.update(flatten_config_dict(val, prefix=key))
         else:
             output[key] = val
-            
+
     return output
-    
+
 def flatten_config_dict(config, prefix=None):
     output = {}
     for key, val in config.items():
@@ -167,7 +170,7 @@ def flatten_config_dict(config, prefix=None):
             else:
                 output[key] = val
     return output
-            
+
 
 
 def prefix_metrics(metrics, prefix):

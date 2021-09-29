@@ -84,7 +84,7 @@ class ConservativeSAC(object):
         soft_target_update(self.qf1, self.target_qf1, soft_target_update_rate)
         soft_target_update(self.qf2, self.target_qf2, soft_target_update_rate)
 
-    def train(self, batch, return_stats=False):
+    def train(self, batch):
         self._total_steps += 1
 
         observations = batch['observations']

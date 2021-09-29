@@ -27,6 +27,7 @@ FLAGS_DEF = define_flags_with_default(
     replay_buffer_size=1000000,
     seed=42,
     device='cpu',
+    save_model=False,
 
     policy_arch='256-256',
     qf_arch='256-256',
@@ -126,6 +127,10 @@ def main(argv):
                 metrics['average_return'] = np.mean([np.sum(t['rewards']) for t in trajs])
                 metrics['average_traj_length'] = np.mean([len(t['rewards']) for t in trajs])
 
+                if FLAGS.save_model:
+                    save_data = {'sac': sac, 'variant': variant, 'epoch': epoch}
+                    wandb_logger.save_pickle(save_data, 'model.pkl')
+
         metrics['rollout_time'] = rollout_timer()
         metrics['train_time'] = train_timer()
         metrics['eval_time'] = eval_timer()
@@ -134,6 +139,10 @@ def main(argv):
         viskit_metrics.update(metrics)
         logger.record_dict(metrics)
         logger.dump_tabular(with_prefix=False, with_timestamp=False)
+
+    if FLAGS.save_model:
+        save_data = {'sac': sac, 'variant': variant, 'epoch': epoch}
+        wandb_logger.save_pickle(save_data, 'model.pkl')
 
 
 if __name__ == '__main__':

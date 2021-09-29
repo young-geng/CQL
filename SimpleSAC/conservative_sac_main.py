@@ -28,6 +28,7 @@ FLAGS_DEF = define_flags_with_default(
     replay_buffer_size=1000000,
     seed=42,
     device='cpu',
+    save_model=False,
 
     policy_arch='256-256',
     qf_arch='256-256',
@@ -106,9 +107,7 @@ def main(argv):
                 batch = dataset_replay_buffer.sample(FLAGS.batch_size)
                 batch = batch_to_torch(batch, FLAGS.device)
                 if batch_idx + 1 == FLAGS.n_train_step_per_epoch:
-                    metrics.update(
-                        prefix_metrics(sac.train(batch), 'sac')
-                    )
+                    metrics.update(prefix_metrics(sac.train(batch), 'sac'))
                 else:
                     sac.train(batch)
 
@@ -123,6 +122,9 @@ def main(argv):
                 metrics['average_normalizd_return'] = np.mean(
                     [eval_sampler.env.get_normalized_score(np.sum(t['rewards'])) for t in trajs]
                 )
+                if FLAGS.save_model:
+                    save_data = {'sac': sac, 'variant': variant, 'epoch': epoch}
+                    wandb_logger.save_pickle(save_data, 'model.pkl')
 
         metrics['train_time'] = train_timer()
         metrics['eval_time'] = eval_timer()
@@ -132,6 +134,9 @@ def main(argv):
         logger.record_dict(viskit_metrics)
         logger.dump_tabular(with_prefix=False, with_timestamp=False)
 
+    if FLAGS.save_model:
+        save_data = {'sac': sac, 'variant': variant, 'epoch': epoch}
+        wandb_logger.save_pickle(save_data, 'model.pkl')
 
 if __name__ == '__main__':
     absl.app.run(main)
