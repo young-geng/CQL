@@ -14,6 +14,15 @@ def extend_and_repeat(tensor, dim, repeat):
     return torch.unsqueeze(tensor, dim) * tensor.new_ones(ones_shape)
 
 
+def soft_target_update(network, target_network, soft_target_update_rate):
+    target_network_params = {k: v for k, v in target_network.named_parameters()}
+    for k, v in network.named_parameters():
+        target_network_params[k].data = (
+            (1 - soft_target_update_rate) * target_network_params[k].data
+            + soft_target_update_rate * v.data
+        )
+
+
 class FullyConnectedNetwork(nn.Module):
 
     def __init__(self, input_dim, output_dim, arch='256-256'):

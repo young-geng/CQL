@@ -9,8 +9,7 @@ import torch.optim as optim
 from torch import nn as nn
 import torch.nn.functional as F
 
-from .model import Scalar
-from .sac import soft_target_update
+from .model import Scalar, soft_target_update
 
 
 class ConservativeSAC(object):
@@ -38,7 +37,7 @@ class ConservativeSAC(object):
         config.cql_min_q_weight = 5.0
 
         if updates is not None:
-            config.update(updates)
+            config.update(ConfigDict(updates).copy_and_resolve_references())
         return config
 
     def __init__(self, config, policy, qf1, qf2, target_qf1, target_qf2):

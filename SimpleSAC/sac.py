@@ -9,16 +9,7 @@ import torch.optim as optim
 from torch import nn as nn
 import torch.nn.functional as F
 
-from .model import Scalar
-
-
-def soft_target_update(network, target_network, soft_target_update_rate):
-    target_network_params = {k: v for k, v in target_network.named_parameters()}
-    for k, v in network.named_parameters():
-        target_network_params[k].data = (
-            (1 - soft_target_update_rate) * target_network_params[k].data
-            + soft_target_update_rate * v.data
-        )
+from .model import Scalar, soft_target_update
 
 
 class SAC(object):
@@ -39,7 +30,7 @@ class SAC(object):
         config.target_update_period = 1
 
         if updates is not None:
-            config.update(updates)
+            config.update(ConfigDict(updates).copy_and_resolve_references())
         return config
 
     def __init__(self, config, policy, qf1, qf2, target_qf1, target_qf2):

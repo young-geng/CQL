@@ -14,6 +14,7 @@ import absl.flags
 from absl import logging
 from ml_collections import ConfigDict
 from ml_collections.config_flags import config_flags
+from ml_collections.config_dict import config_dict
 
 import wandb
 
@@ -39,21 +40,25 @@ class Timer(object):
 class WandBLogger(object):
 
     @staticmethod
-    def get_default_config():
+    def get_default_config(updates=None):
         config = ConfigDict()
         config.online = False
         config.prefix = 'SimpleSAC'
         config.project = 'sac'
         config.output_dir = '/tmp/SimpleSAC'
         config.random_delay = 0.0
-        config.experiment_id = ''
+        config.experiment_id = config_dict.placeholder(str)
+        config.anonymous = config_dict.placeholder(str)
+        config.notes = config_dict.placeholder(str)
+
+        if updates is not None:
+            config.update(ConfigDict(updates).copy_and_resolve_references())
         return config
 
     def __init__(self, config, variant):
-        self.config = WandBLogger.get_default_config()
-        self.config.update(config)
+        self.config = WandBLogger.get_default_config(config)
 
-        if self.config.experiment_id == '':
+        if self.config.experiment_id is None:
             self.config.experiment_id = uuid.uuid4().hex
 
         if self.config.prefix != '':
@@ -73,11 +78,14 @@ class WandBLogger(object):
         if self.config.random_delay > 0:
             time.sleep(np.random.uniform(0, self.config.random_delay))
 
-        wandb.init(
+        self.run = wandb.init(
+            reinit=True,
             config=self._variant,
             project=self.config.project,
             dir=self.config.output_dir,
             id=self.config.experiment_id,
+            anonymous=self.config.anonymous,
+            notes=self.config.notes,
             settings=wandb.Settings(
                 start_method="thread",
                 _disable_stats=True,
@@ -86,19 +94,11 @@ class WandBLogger(object):
         )
 
     def log(self, *args, **kwargs):
-        wandb.log(*args, **kwargs)
+        self.run.log(*args, **kwargs)
 
     def save_pickle(self, obj, filename):
         with open(os.path.join(self.config.output_dir, filename), 'wb') as fout:
             pickle.dump(obj, fout)
-
-    @property
-    def online(self):
-        return self.conifg.online
-
-    @property
-    def project(self):
-        return self.config.project
 
     @property
     def experiment_id(self):
@@ -158,6 +158,7 @@ def get_user_flags(flags, flags_def):
             output[key] = val
 
     return output
+
 
 def flatten_config_dict(config, prefix=None):
     output = {}
