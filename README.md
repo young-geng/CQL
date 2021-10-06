@@ -64,8 +64,8 @@ python -m SimpleSAC.conservative_sac_main \
 
 ## Results of Running CQL on D4RL Environments
 In order to save your time and compute resources, I've done a sweep of CQL on certain
-D4RL environments with various min Q weight values. [The results can be accessed at here.](https://wandb.ai/ygx/CQL--cql_min_q_weight_sweep_1).
-You can choose the environment to visualize by using the filter function. The results for each `cql.cql_min_q_weight` on each `env`
+D4RL environments with various min Q weight values. [The results can be seen here](https://wandb.ai/ygx/CQL--cql_min_q_weight_sweep_1).
+You can choose the environment to visualize by filtering on `env`. The results for each `cql.cql_min_q_weight` on each `env`
 is repeated and average across 3 random seeds.
 
 
