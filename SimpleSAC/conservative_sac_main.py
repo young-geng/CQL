@@ -14,7 +14,7 @@ import absl.app
 import absl.flags
 
 from .conservative_sac import ConservativeSAC
-from .replay_buffer import ReplayBuffer, batch_to_torch, get_d4rl_dataset
+from .replay_buffer import batch_to_torch, get_d4rl_dataset, subsample_batch
 from .model import TanhGaussianPolicy, FullyConnectedQFunction, SamplerPolicy
 from .sampler import StepSampler, TrajSampler
 from .utils import Timer, define_flags_with_default, set_random_seed, print_flags, get_user_flags, prefix_metrics
@@ -32,6 +32,7 @@ FLAGS_DEF = define_flags_with_default(
 
     policy_arch='256-256',
     qf_arch='256-256',
+    orthogonal_init=False,
     policy_log_std_multiplier=1.0,
     policy_log_std_offset=-1.0,
 
@@ -63,30 +64,30 @@ def main(argv):
     set_random_seed(FLAGS.seed)
 
     eval_sampler = TrajSampler(gym.make(FLAGS.env).unwrapped, FLAGS.max_traj_length)
-
-    dataset_replay_buffer = ReplayBuffer(
-        max_size=0, data=get_d4rl_dataset(eval_sampler.env)
-    )
+    dataset = get_d4rl_dataset(eval_sampler.env)
 
     policy = TanhGaussianPolicy(
         eval_sampler.env.observation_space.shape[0],
         eval_sampler.env.action_space.shape[0],
-        FLAGS.policy_arch,
+        arch=FLAGS.policy_arch,
         log_std_multiplier=FLAGS.policy_log_std_multiplier,
         log_std_offset=FLAGS.policy_log_std_offset,
+        orthogonal_init=FLAGS.orthogonal_init,
     )
 
     qf1 = FullyConnectedQFunction(
         eval_sampler.env.observation_space.shape[0],
         eval_sampler.env.action_space.shape[0],
-        FLAGS.qf_arch
+        arch=FLAGS.qf_arch,
+        orthogonal_init=FLAGS.orthogonal_init,
     )
     target_qf1 = deepcopy(qf1)
 
     qf2 = FullyConnectedQFunction(
         eval_sampler.env.observation_space.shape[0],
         eval_sampler.env.action_space.shape[0],
-        FLAGS.qf_arch
+        arch=FLAGS.qf_arch,
+        orthogonal_init=FLAGS.orthogonal_init,
     )
     target_qf2 = deepcopy(qf2)
 
@@ -104,12 +105,9 @@ def main(argv):
 
         with Timer() as train_timer:
             for batch_idx in range(FLAGS.n_train_step_per_epoch):
-                batch = dataset_replay_buffer.sample(FLAGS.batch_size)
+                batch = subsample_batch(dataset, FLAGS.batch_size)
                 batch = batch_to_torch(batch, FLAGS.device)
-                if batch_idx + 1 == FLAGS.n_train_step_per_epoch:
-                    metrics.update(prefix_metrics(sac.train(batch), 'sac'))
-                else:
-                    sac.train(batch)
+                metrics.update(prefix_metrics(sac.train(batch), 'sac'))
 
         with Timer() as eval_timer:
             if epoch == 0 or (epoch + 1) % FLAGS.eval_period == 0:

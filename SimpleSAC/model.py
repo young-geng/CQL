@@ -23,13 +23,30 @@ def soft_target_update(network, target_network, soft_target_update_rate):
         )
 
 
+def multiple_action_q_function(forward):
+    # Forward the q function with multiple actions on each state, to be used as a decorator
+    def wrapped(self, observations, actions, **kwargs):
+        multiple_actions = False
+        batch_size = observations.shape[0]
+        if actions.ndim == 3 and observations.ndim == 2:
+            multiple_actions = True
+            observations = extend_and_repeat(observations, 1, actions.shape[1]).reshape(-1, observations.shape[-1])
+            actions = actions.reshape(-1, actions.shape[-1])
+        q_values = forward(self, observations, actions, **kwargs)
+        if multiple_actions:
+            q_values = q_values.reshape(batch_size, -1)
+        return q_values
+    return wrapped
+
+
 class FullyConnectedNetwork(nn.Module):
 
-    def __init__(self, input_dim, output_dim, arch='256-256'):
+    def __init__(self, input_dim, output_dim, arch='256-256', orthogonal_init=False):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.arch = arch
+        self.orthogonal_init = orthogonal_init
 
         d = input_dim
         modules = []
@@ -37,11 +54,15 @@ class FullyConnectedNetwork(nn.Module):
 
         for hidden_size in hidden_sizes:
             fc = nn.Linear(d, hidden_size)
+            if orthogonal_init:
+                nn.init.orthogonal_(fc.weight, gain=np.sqrt(2))
             modules.append(fc)
             modules.append(nn.ReLU())
             d = hidden_size
 
         last_fc = nn.Linear(d, output_dim)
+        if orthogonal_init:
+            nn.init.orthogonal_(last_fc.weight, gain=np.sqrt(2))
         modules.append(last_fc)
 
         self.network = nn.Sequential(*modules)
@@ -96,15 +117,17 @@ class ReparameterizedTanhGaussian(nn.Module):
 class TanhGaussianPolicy(nn.Module):
 
     def __init__(self, observation_dim, action_dim, arch='256-256',
-                 log_std_multiplier=1.0, log_std_offset=-1.0, no_tanh=False):
+                 log_std_multiplier=1.0, log_std_offset=-1.0,
+                 orthogonal_init=False, no_tanh=False):
         super().__init__()
         self.observation_dim = observation_dim
         self.action_dim = action_dim
         self.arch = arch
+        self.orthogonal_init = orthogonal_init
         self.no_tanh = no_tanh
 
         self.base_network = FullyConnectedNetwork(
-            observation_dim, 2 * action_dim, arch
+            observation_dim, 2 * action_dim, arch, orthogonal_init
         )
         self.log_std_multiplier = Scalar(log_std_multiplier)
         self.log_std_offset = Scalar(log_std_offset)
@@ -142,20 +165,21 @@ class SamplerPolicy(object):
             actions = actions.cpu().numpy()
         return actions
 
+
 class FullyConnectedQFunction(nn.Module):
 
-    def __init__(self, observation_dim, action_dim, arch='256-256'):
+    def __init__(self, observation_dim, action_dim, arch='256-256', orthogonal_init=False):
         super().__init__()
         self.observation_dim = observation_dim
         self.action_dim = action_dim
         self.arch = arch
+        self.orthogonal_init = orthogonal_init
         self.network = FullyConnectedNetwork(
-            observation_dim + action_dim, 1, arch
+            observation_dim + action_dim, 1, arch, orthogonal_init
         )
 
+    @multiple_action_q_function
     def forward(self, observations, actions):
-        if actions.ndim == 3 and observations.ndim == 2:
-            observations = extend_and_repeat(observations, 1, actions.shape[1])
         input_tensor = torch.cat([observations, actions], dim=-1)
         return torch.squeeze(self.network(input_tensor), dim=-1)
 
