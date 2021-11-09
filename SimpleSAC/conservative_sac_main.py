@@ -25,10 +25,13 @@ from viskit.logging import logger, setup_logger
 FLAGS_DEF = define_flags_with_default(
     env='halfcheetah-medium-v2',
     max_traj_length=1000,
-    replay_buffer_size=1000000,
     seed=42,
     device='cpu',
     save_model=False,
+    batch_size=256,
+
+    reward_scale=1.0,
+    reward_bias=0.0,
 
     policy_arch='256-256',
     qf_arch='256-256',
@@ -40,8 +43,6 @@ FLAGS_DEF = define_flags_with_default(
     n_train_step_per_epoch=1000,
     eval_period=10,
     eval_n_trajs=5,
-
-    batch_size=256,
 
     cql=ConservativeSAC.get_default_config(),
     logging=WandBLogger.get_default_config(),
@@ -65,6 +66,7 @@ def main(argv):
 
     eval_sampler = TrajSampler(gym.make(FLAGS.env).unwrapped, FLAGS.max_traj_length)
     dataset = get_d4rl_dataset(eval_sampler.env)
+    dataset['rewards'] = dataset['rewards'] * FLAGS.reward_scale + FLAGS.reward_bias
 
     policy = TanhGaussianPolicy(
         eval_sampler.env.observation_space.shape[0],

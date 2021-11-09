@@ -18,7 +18,6 @@ class ConservativeSAC(object):
     def get_default_config(updates=None):
         config = ConfigDict()
         config.discount = 0.99
-        config.reward_scale = 1.0
         config.alpha_multiplier = 1.0
         config.use_automatic_entropy_tuning = True
         config.backup_entropy = False
@@ -32,7 +31,7 @@ class ConservativeSAC(object):
         config.cql_n_actions = 10
         config.cql_importance_sample = True
         config.cql_lagrange = False
-        config.cql_target_action_gap = -1.0
+        config.cql_target_action_gap = 1.0
         config.cql_temp = 1.0
         config.cql_min_q_weight = 5.0
 
@@ -121,7 +120,7 @@ class ConservativeSAC(object):
         if self.config.backup_entropy:
             target_q_values = target_q_values - alpha * next_log_pi
 
-        q_target = self.config.reward_scale * rewards + (1. - dones) * self.config.discount * target_q_values
+        q_target = rewards + (1. - dones) * self.config.discount * target_q_values
         qf1_loss = F.mse_loss(q1_pred, q_target.detach())
         qf2_loss = F.mse_loss(q2_pred, q_target.detach())
 

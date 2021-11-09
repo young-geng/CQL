@@ -56,7 +56,7 @@ class WandBLogger(object):
         return config
 
     def __init__(self, config, variant):
-        self.config = WandBLogger.get_default_config(config)
+        self.config = self.get_default_config(config)
 
         if self.config.experiment_id is None:
             self.config.experiment_id = uuid.uuid4().hex
