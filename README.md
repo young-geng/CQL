@@ -1,6 +1,7 @@
 # CQL
 A simple and modular implementation of the [Conservative Q Learning](https://arxiv.org/abs/2006.04779) and [Soft Actor Critic](https://arxiv.org/abs/1812.05905) algorithm in PyTorch.
 
+If you like Jax, checkout my [reimplementation of this codebase in Jax](https://github.com/young-geng/JaxCQL), which runs 4 times faster.
 
 ## Installation
 
