@@ -10,6 +10,7 @@ from torch import nn as nn
 import torch.nn.functional as F
 
 from .model import Scalar, soft_target_update
+from .utils import prefix_metrics
 
 
 class ConservativeSAC(object):
@@ -34,6 +35,7 @@ class ConservativeSAC(object):
         config.cql_target_action_gap = 1.0
         config.cql_temp = 1.0
         config.cql_min_q_weight = 5.0
+        config.cql_max_target_backup = False
 
         if updates is not None:
             config.update(ConfigDict(updates).copy_and_resolve_references())
@@ -111,11 +113,22 @@ class ConservativeSAC(object):
         q1_pred = self.qf1(observations, actions)
         q2_pred = self.qf2(observations, actions)
 
-        new_next_actions, next_log_pi = self.policy(next_observations)
-        target_q_values = torch.min(
-            self.target_qf1(next_observations, new_next_actions),
-            self.target_qf2(next_observations, new_next_actions),
-        )
+        if self.config.cql_max_target_backup:
+            new_next_actions, next_log_pi = self.policy(next_observations, repeat=self.config.cql_n_actions)
+            target_q_values, max_target_indices = torch.max(
+                torch.min(
+                    self.target_qf1(next_observations, new_next_actions),
+                    self.target_qf2(next_observations, new_next_actions),
+                ),
+                dim=-1
+            )
+            next_log_pi = torch.gather(next_log_pi, -1, max_target_indices.unsqueeze(-1))
+        else:
+            new_next_actions, next_log_pi = self.policy(next_observations)
+            target_q_values = torch.min(
+                self.target_qf1(next_observations, new_next_actions),
+                self.target_qf2(next_observations, new_next_actions),
+            )
 
         if self.config.backup_entropy:
             target_q_values = target_q_values - alpha * next_log_pi
@@ -168,23 +181,25 @@ class ConservativeSAC(object):
                     dim=1
                 )
 
-            cql_min_qf1_loss = torch.logsumexp(cql_cat_q1 / self.config.cql_temp, dim=1).mean() * self.config.cql_min_q_weight * self.config.cql_temp
-            cql_min_qf2_loss = torch.logsumexp(cql_cat_q2 / self.config.cql_temp, dim=1).mean() * self.config.cql_min_q_weight * self.config.cql_temp
+            cql_qf1_ood = torch.logsumexp(cql_cat_q1 / self.config.cql_temp, dim=1) * self.config.cql_temp
+            cql_qf2_ood = torch.logsumexp(cql_cat_q2 / self.config.cql_temp, dim=1) * self.config.cql_temp
 
             """Subtract the log likelihood of data"""
-            cql_min_qf1_loss = cql_min_qf1_loss - q1_pred.mean() * self.config.cql_min_q_weight
-            cql_min_qf2_loss = cql_min_qf2_loss - q2_pred.mean() * self.config.cql_min_q_weight
+            cql_qf1_diff = (cql_qf1_ood - q1_pred).mean()
+            cql_qf2_diff = (cql_qf2_ood - q2_pred).mean()
 
             if self.config.cql_lagrange:
                 alpha_prime = torch.clamp(torch.exp(self.log_alpha_prime()), min=0.0, max=1000000.0)
-                cql_min_qf1_loss = alpha_prime * (cql_min_qf1_loss - self.config.cql_target_action_gap)
-                cql_min_qf2_loss = alpha_prime * (cql_min_qf2_loss - self.config.cql_target_action_gap)
+                cql_min_qf1_loss = alpha_prime * (cql_qf1_diff - self.config.cql_target_action_gap)
+                cql_min_qf2_loss = alpha_prime * (cql_qf2_diff - self.config.cql_target_action_gap)
 
                 self.alpha_prime_optimizer.zero_grad()
                 alpha_prime_loss = (-cql_min_qf1_loss - cql_min_qf2_loss)*0.5
                 alpha_prime_loss.backward(retain_graph=True)
                 self.alpha_prime_optimizer.step()
             else:
+                cql_min_qf1_loss = cql_qf1_diff * self.config.cql_min_q_weight
+                cql_min_qf2_loss = cql_qf2_diff * self.config.cql_min_q_weight
                 alpha_prime_loss = observations.new_tensor(0.0)
                 alpha_prime = observations.new_tensor(0.0)
 
@@ -210,25 +225,6 @@ class ConservativeSAC(object):
                 self.config.soft_target_update_rate
             )
 
-        if self.config.use_cql:
-            cql_metrics = dict(
-                cql_std_q1=cql_std_q1.mean().item(),
-                cql_std_q2=cql_std_q2.mean().item(),
-
-                cql_q1_rand=cql_q1_rand.mean().item(),
-                cql_q2_rand=cql_q2_rand.mean().item(),
-
-                cql_min_qf1_loss=cql_min_qf1_loss.mean().item(),
-                cql_min_qf2_loss=cql_min_qf2_loss.mean().item(),
-
-                cql_q1_current_actions=cql_q1_current_actions.mean().item(),
-                cql_q2_current_actions=cql_q2_current_actions.mean().item(),
-
-                cql_q1_next_actions=cql_q1_next_actions.mean().item(),
-                cql_q2_next_actions=cql_q2_next_actions.mean().item(),
-            )
-        else:
-            cql_metrics = {}
 
         metrics = dict(
             log_pi=log_pi.mean().item(),
@@ -242,7 +238,25 @@ class ConservativeSAC(object):
             average_target_q=target_q_values.mean().item(),
             total_steps=self.total_steps,
         )
-        metrics.update(cql_metrics)
+
+        if self.config.use_cql:
+            metrics.update(prefix_metrics(dict(
+                cql_std_q1=cql_std_q1.mean().item(),
+                cql_std_q2=cql_std_q2.mean().item(),
+                cql_q1_rand=cql_q1_rand.mean().item(),
+                cql_q2_rand=cql_q2_rand.mean().item(),
+                cql_min_qf1_loss=cql_min_qf1_loss.mean().item(),
+                cql_min_qf2_loss=cql_min_qf2_loss.mean().item(),
+                cql_qf1_diff=cql_qf1_diff.mean().item(),
+                cql_qf2_diff=cql_qf2_diff.mean().item(),
+                cql_q1_current_actions=cql_q1_current_actions.mean().item(),
+                cql_q2_current_actions=cql_q2_current_actions.mean().item(),
+                cql_q1_next_actions=cql_q1_next_actions.mean().item(),
+                cql_q2_next_actions=cql_q2_next_actions.mean().item(),
+                alpha_prime_loss=alpha_prime_loss.item(),
+                alpha_prime=alpha_prime.item(),
+            ), 'cql'))
+
         return metrics
 
     def torch_to_device(self, device):

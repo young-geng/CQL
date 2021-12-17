@@ -26,7 +26,7 @@ FLAGS_DEF = define_flags_with_default(
     max_traj_length=1000,
     replay_buffer_size=1000000,
     seed=42,
-    device='cpu',
+    device='cuda',
     save_model=False,
 
     policy_arch='256-256',

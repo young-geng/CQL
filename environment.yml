@@ -1,7 +1,6 @@
 name: SimpleSAC
 channels:
     - https://conda.anaconda.org/pytorch
-    - https://conda.anaconda.org/conda-forge
 dependencies:
     - python=3.8
     - pip

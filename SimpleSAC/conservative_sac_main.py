@@ -26,7 +26,7 @@ FLAGS_DEF = define_flags_with_default(
     env='halfcheetah-medium-v2',
     max_traj_length=1000,
     seed=42,
-    device='cpu',
+    device='cuda',
     save_model=False,
     batch_size=256,
 

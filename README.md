@@ -22,8 +22,7 @@ You can run SAC experiments using the following command:
 ```
 python -m SimpleSAC.sac_main \
     --env 'HalfCheetah-v2' \
-    --logging.output_dir './experiment_output' \
-    --device='cuda'
+    --logging.output_dir './experiment_output'
 ```
 All available command options can be seen in SimpleSAC/conservative\_sac_main.py and SimpleSAC/conservative_sac.py.
 
@@ -32,11 +31,10 @@ You can run CQL experiments using the following command:
 ```
 python -m SimpleSAC.conservative_sac_main \
     --env 'halfcheetah-medium-v0' \
-    --logging.output_dir './experiment_output' \
-    --device='cuda'
+    --logging.output_dir './experiment_output'
 ```
 
-If you want to run on CPU only, just omit the `--device='cuda'` part.
+If you want to run on CPU only, just add the `--device='cpu'` option.
 All available command options can be seen in SimpleSAC/sac_main.py and SimpleSAC/sac.py.
 
 
