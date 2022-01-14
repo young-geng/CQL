@@ -122,7 +122,7 @@ class ConservativeSAC(object):
                 ),
                 dim=-1
             )
-            next_log_pi = torch.gather(next_log_pi, -1, max_target_indices.unsqueeze(-1))
+            next_log_pi = torch.gather(next_log_pi, -1, max_target_indices.unsqueeze(-1)).squeeze(-1)
         else:
             new_next_actions, next_log_pi = self.policy(next_observations)
             target_q_values = torch.min(
@@ -190,8 +190,8 @@ class ConservativeSAC(object):
 
             if self.config.cql_lagrange:
                 alpha_prime = torch.clamp(torch.exp(self.log_alpha_prime()), min=0.0, max=1000000.0)
-                cql_min_qf1_loss = alpha_prime * (cql_qf1_diff - self.config.cql_target_action_gap)
-                cql_min_qf2_loss = alpha_prime * (cql_qf2_diff - self.config.cql_target_action_gap)
+                cql_min_qf1_loss = alpha_prime * self.config.cql_min_q_weight * (cql_qf1_diff - self.config.cql_target_action_gap)
+                cql_min_qf2_loss = alpha_prime * self.config.cql_min_q_weight * (cql_qf2_diff - self.config.cql_target_action_gap)
 
                 self.alpha_prime_optimizer.zero_grad()
                 alpha_prime_loss = (-cql_min_qf1_loss - cql_min_qf2_loss)*0.5
