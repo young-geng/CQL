@@ -56,13 +56,15 @@ class FullyConnectedNetwork(nn.Module):
             fc = nn.Linear(d, hidden_size)
             if orthogonal_init:
                 nn.init.orthogonal_(fc.weight, gain=np.sqrt(2))
+                nn.init.constant_(fc.bias, 0.0)
             modules.append(fc)
             modules.append(nn.ReLU())
             d = hidden_size
 
         last_fc = nn.Linear(d, output_dim)
         if orthogonal_init:
-            nn.init.orthogonal_(last_fc.weight, gain=np.sqrt(2))
+            nn.init.orthogonal_(last_fc.weight, gain=1e-2)
+            nn.init.constant_(fc.bias, 0.0)
         modules.append(last_fc)
 
         self.network = nn.Sequential(*modules)
