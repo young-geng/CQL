@@ -64,7 +64,10 @@ class FullyConnectedNetwork(nn.Module):
         last_fc = nn.Linear(d, output_dim)
         if orthogonal_init:
             nn.init.orthogonal_(last_fc.weight, gain=1e-2)
-            nn.init.constant_(fc.bias, 0.0)
+        else:
+            nn.init.xavier_uniform_(last_fc.weight, gain=1e-2)
+
+        nn.init.constant_(last_fc.bias, 0.0)
         modules.append(last_fc)
 
         self.network = nn.Sequential(*modules)
