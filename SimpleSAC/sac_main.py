@@ -31,6 +31,7 @@ FLAGS_DEF = define_flags_with_default(
 
     policy_arch='256-256',
     qf_arch='256-256',
+    orthogonal_init=False,
     policy_log_std_multiplier=1.0,
     policy_log_std_offset=-1.0,
 
@@ -68,24 +69,27 @@ def main(argv):
     replay_buffer = ReplayBuffer(FLAGS.replay_buffer_size)
 
     policy = TanhGaussianPolicy(
-        train_sampler.env.observation_space.shape[0],
-        train_sampler.env.action_space.shape[0],
-        FLAGS.policy_arch,
+        eval_sampler.env.observation_space.shape[0],
+        eval_sampler.env.action_space.shape[0],
+        arch=FLAGS.policy_arch,
         log_std_multiplier=FLAGS.policy_log_std_multiplier,
         log_std_offset=FLAGS.policy_log_std_offset,
+        orthogonal_init=FLAGS.orthogonal_init,
     )
 
     qf1 = FullyConnectedQFunction(
-        train_sampler.env.observation_space.shape[0],
-        train_sampler.env.action_space.shape[0],
-        FLAGS.qf_arch
+        eval_sampler.env.observation_space.shape[0],
+        eval_sampler.env.action_space.shape[0],
+        arch=FLAGS.qf_arch,
+        orthogonal_init=FLAGS.orthogonal_init,
     )
     target_qf1 = deepcopy(qf1)
 
     qf2 = FullyConnectedQFunction(
-        train_sampler.env.observation_space.shape[0],
-        train_sampler.env.action_space.shape[0],
-        FLAGS.qf_arch
+        eval_sampler.env.observation_space.shape[0],
+        eval_sampler.env.action_space.shape[0],
+        arch=FLAGS.qf_arch,
+        orthogonal_init=FLAGS.orthogonal_init,
     )
     target_qf2 = deepcopy(qf2)
 
