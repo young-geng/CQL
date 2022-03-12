@@ -163,13 +163,14 @@ def get_user_flags(flags, flags_def):
 def flatten_config_dict(config, prefix=None):
     output = {}
     for key, val in config.items():
-        if isinstance(val, ConfigDict):
-            output.update(flatten_config_dict(val, prefix=key))
+        if prefix is not None:
+            next_prefix = '{}.{}'.format(prefix, key)
         else:
-            if prefix is not None:
-                output['{}.{}'.format(prefix, key)] = val
-            else:
-                output[key] = val
+            next_prefix = key
+        if isinstance(val, ConfigDict):
+            output.update(flatten_config_dict(val, prefix=next_prefix))
+        else:
+            output[next_prefix] = val
     return output
 
 
